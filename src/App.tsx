@@ -1,6 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { OPERATORS, type EdgeConfig, type OperatorId, type Raster } from "./edges";
-import { DebugMaps } from "./DebugMaps";
+import { EdgeStages } from "./EdgeStages";
 import { encodeGif } from "./gif";
 import { drawFrame } from "./render";
 import { buildScene, loadRaster, spectrum } from "./scene";
@@ -137,7 +137,7 @@ export function App() {
           </p>
         )}
       </section>
-      {raster && <DebugMaps raster={raster} config={deferredConfig} />}
+      {raster && <EdgeStages raster={raster} config={deferredConfig} />}
     </main>
   );
 }

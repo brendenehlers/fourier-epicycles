@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef } from "react";
 import { edgeMaps, edgeMask, OPERATORS, type EdgeConfig, type Raster } from "./edges";
 
 /** Shows each edge-detection stage as a grayscale image. */
-export function DebugMaps({ raster, config }: { raster: Raster; config: EdgeConfig }) {
+export function EdgeStages({ raster, config }: { raster: Raster; config: EdgeConfig }) {
   const maps = useMemo(() => edgeMaps(raster, config.operator), [raster, config.operator]);
   const mask = useMemo(() => edgeMask(maps, config.threshold), [maps, config.threshold]);
   return (
-    <section className="debug">
+    <section className="stages">
       <MapCanvas title={`${OPERATORS[config.operator].label} magnitude`} values={maps.magnitude} width={maps.width} />
       <MapCanvas title="Thinned, normalized to nearby max" values={maps.normalized} width={maps.width} />
       <MapCanvas title={`Edges at ${Math.round(config.threshold * 100)}%`} values={mask} width={maps.width} />
