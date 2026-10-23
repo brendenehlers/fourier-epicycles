@@ -7,7 +7,6 @@ import { buildScene, loadRaster, spectrum } from "./scene";
 
 const DISPLAY_SIDE = 560;
 const MAX_POINTS = 3000;
-const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
 
 type Export = { status: "idle" } | { status: "encoding"; progress: number } | { status: "failed"; message: string };
 
@@ -138,7 +137,7 @@ export function App() {
           </p>
         )}
       </section>
-      {DEBUG && raster && <DebugMaps raster={raster} config={deferredConfig} />}
+      {raster && <DebugMaps raster={raster} config={deferredConfig} />}
     </main>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { edgeMaps, edgeMask, OPERATORS, type EdgeConfig, type Raster } from "./edges";
 
-/** Shows each edge-detection stage as a grayscale image; enabled with ?debug=1. */
+/** Shows each edge-detection stage as a grayscale image. */
 export function DebugMaps({ raster, config }: { raster: Raster; config: EdgeConfig }) {
   const maps = useMemo(() => edgeMaps(raster, config.operator), [raster, config.operator]);
   const mask = useMemo(() => edgeMask(maps, config.threshold), [maps, config.threshold]);
