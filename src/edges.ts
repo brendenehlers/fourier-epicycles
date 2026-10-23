@@ -51,8 +51,16 @@ export function grayscale({ width, height, data }: Raster): Float32Array {
   return out;
 }
 
-export function gradientMagnitude(gray: Float32Array, width: number, height: number, op: Operator): Float32Array {
-  const out = new Float32Array(width * height);
+export interface Gradient {
+  dx: Float32Array;
+  dy: Float32Array;
+  magnitude: Float32Array;
+}
+
+export function gradient(gray: Float32Array, width: number, height: number, op: Operator): Gradient {
+  const dx = new Float32Array(width * height);
+  const dy = new Float32Array(width * height);
+  const magnitude = new Float32Array(width * height);
   for (let y = 1; y < height - 1; y++) {
     for (let x = 1; x < width - 1; x++) {
       let sx = 0;
@@ -64,7 +72,28 @@ export function gradientMagnitude(gray: Float32Array, width: number, height: num
           sy += op.gy[ky * 3 + kx]! * v;
         }
       }
-      out[y * width + x] = Math.hypot(sx, sy);
+      const i = y * width + x;
+      dx[i] = sx;
+      dy[i] = sy;
+      magnitude[i] = Math.hypot(sx, sy);
+    }
+  }
+  return { dx, dy, magnitude };
+}
+
+/** Keeps only pixels that peak across the edge, thinning ridges to 1px. */
+export function suppressNonMaxima({ dx, dy, magnitude }: Gradient, width: number, height: number): Float32Array {
+  const out = new Float32Array(width * height);
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const i = y * width + x;
+      const m = magnitude[i]!;
+      if (m === 0) continue;
+      // Neighbour offset along the gradient, quantised to 0°, 45°, 90° or 135°.
+      const angle = ((Math.atan2(dy[i]!, dx[i]!) * 180) / Math.PI + 180) % 180;
+      const step = angle < 22.5 || angle >= 157.5 ? 1 : angle < 67.5 ? width + 1 : angle < 112.5 ? width : width - 1;
+      // Strict on one side so a two-pixel plateau keeps exactly one pixel.
+      if (m > magnitude[i - step]! && m >= magnitude[i + step]!) out[i] = m;
     }
   }
   return out;
@@ -72,7 +101,7 @@ export function gradientMagnitude(gray: Float32Array, width: number, height: num
 
 export function edgePoints(raster: Raster, config: EdgeConfig): Point[] {
   const { width, height } = raster;
-  const mag = gradientMagnitude(grayscale(raster), width, height, OPERATORS[config.operator]);
+  const mag = suppressNonMaxima(gradient(grayscale(raster), width, height, OPERATORS[config.operator]), width, height);
   let max = 0;
   for (const m of mag) max = Math.max(max, m);
   if (max === 0) return [];

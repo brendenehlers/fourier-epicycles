@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { edgePoints, gradientMagnitude, OPERATORS, type Raster } from "./edges";
+import { edgePoints, gradient, OPERATORS, type Raster } from "./edges";
 import { dft, joints } from "./fourier";
 import { orderPath } from "./path";
 
@@ -12,8 +12,8 @@ function square(size: number): Raster {
 
 test("operators detect a vertical step with their kernel weights", () => {
   const gray = new Float32Array([0, 0, 10, 0, 0, 10, 0, 0, 10]);
-  expect(gradientMagnitude(gray, 3, 3, OPERATORS.sobel)[4]).toBe(40);
-  expect(gradientMagnitude(gray, 3, 3, OPERATORS.prewitt)[4]).toBe(30);
+  expect(gradient(gray, 3, 3, OPERATORS.sobel).magnitude[4]).toBe(40);
+  expect(gradient(gray, 3, 3, OPERATORS.prewitt).magnitude[4]).toBe(30);
 });
 
 test("edge points lie on the square's border and respect maxPoints", () => {
@@ -48,4 +48,12 @@ test("the full epicycle chain reproduces every sample", () => {
     expect(pen.y).toBeCloseTo(p.y, 9);
   });
   expect(terms.map((t) => t.amp)).toEqual(terms.map((t) => t.amp).sort((a, b) => b - a));
+});
+
+test("non-maximum suppression thins each side of the square to one pixel", () => {
+  for (const operator of ["sobel", "prewitt"] as const) {
+    const points = edgePoints(square(32), { operator, threshold: 0.3, maxPoints: 10_000 });
+    const leftSide = points.filter((p) => p.y === 16 && p.x < 16);
+    expect(leftSide).toHaveLength(1);
+  }
 });
