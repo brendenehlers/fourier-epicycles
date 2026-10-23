@@ -13,5 +13,5 @@ bun run build    # static build to dist/
 
 ```bash
 docker build -t epicycle .
-docker run --rm -p 8080:80 epicycle   # http://localhost:8080
+docker run --rm -p 3000:3000 epicycle   # http://localhost:3000
 ```
