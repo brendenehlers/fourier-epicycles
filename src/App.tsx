@@ -1,18 +1,21 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { OPERATORS, type EdgeConfig, type OperatorId, type Raster } from "./edges";
+import { DebugMaps } from "./DebugMaps";
 import { encodeGif } from "./gif";
 import { drawFrame } from "./render";
 import { buildScene, loadRaster, spectrum } from "./scene";
 
 const DISPLAY_SIDE = 560;
+const MAX_POINTS = 3000;
+const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
 
 type Export = { status: "idle" } | { status: "encoding"; progress: number } | { status: "failed"; message: string };
 
 export function App() {
   const [raster, setRaster] = useState<Raster | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [config, setConfig] = useState<EdgeConfig>({ operator: "sobel", threshold: 0.3, maxPoints: 1500 });
-  const [harmonics, setHarmonics] = useState(400);
+  const [config, setConfig] = useState<EdgeConfig>({ operator: "sobel", threshold: 0.3, maxPoints: MAX_POINTS });
+  const [harmonics, setHarmonics] = useState(Infinity);
   const [exportState, setExportState] = useState<Export>({ status: "idle" });
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -104,7 +107,7 @@ export function App() {
           <input
             type="range"
             min={100}
-            max={3000}
+            max={MAX_POINTS}
             step={50}
             value={config.maxPoints}
             onChange={(e) => setConfig({ ...config, maxPoints: Number(e.target.value) })}
@@ -135,6 +138,7 @@ export function App() {
           </p>
         )}
       </section>
+      {DEBUG && raster && <DebugMaps raster={raster} config={deferredConfig} />}
     </main>
   );
 }

@@ -125,18 +125,41 @@ export function localMax(values: Float32Array, width: number, height: number, ra
   return out;
 }
 
-export function edgePoints(raster: Raster, config: EdgeConfig): Point[] {
+export interface EdgeMaps {
+  width: number;
+  height: number;
+  /** Raw operator response before thinning. */
+  magnitude: Float32Array;
+  /** Thinned edge strength over the strongest nearby edge, in [0, 1]; 0 below the noise floor. */
+  normalized: Float32Array;
+}
+
+export function edgeMaps(raster: Raster, operator: OperatorId): EdgeMaps {
   const { width, height } = raster;
-  const mag = suppressNonMaxima(gradient(grayscale(raster), width, height, OPERATORS[config.operator]), width, height);
+  const grad = gradient(grayscale(raster), width, height, OPERATORS[operator]);
+  const thin = suppressNonMaxima(grad, width, height);
   let max = 0;
-  for (const m of mag) max = Math.max(max, m);
-  if (max === 0) return [];
-  // Thresholding against the local maximum keeps low-contrast regions that a global cutoff would drop.
-  const nearby = localMax(mag, width, height, Math.max(1, Math.round(Math.max(width, height) * LOCAL_WINDOW)));
+  for (const m of thin) max = Math.max(max, m);
+  // Comparing against the local maximum keeps low-contrast regions that a global cutoff would drop.
+  const nearby = localMax(thin, width, height, Math.max(1, Math.round(Math.max(width, height) * LOCAL_WINDOW)));
   const floor = max * NOISE_FLOOR;
+  const normalized = new Float32Array(thin.length);
+  for (let i = 0; i < thin.length; i++) {
+    if (thin[i]! > 0 && thin[i]! >= floor) normalized[i] = thin[i]! / nearby[i]!;
+  }
+  return { width, height, magnitude: grad.magnitude, normalized };
+}
+
+export function edgeMask({ normalized }: EdgeMaps, threshold: number): Uint8Array {
+  return Uint8Array.from(normalized, (v) => (v > 0 && v >= threshold ? 1 : 0));
+}
+
+export function edgePoints(raster: Raster, config: EdgeConfig): Point[] {
+  const maps = edgeMaps(raster, config.operator);
+  const mask = edgeMask(maps, config.threshold);
   const points: Point[] = [];
-  for (let i = 0; i < mag.length; i++) {
-    if (mag[i]! >= floor && mag[i]! >= nearby[i]! * config.threshold) points.push({ x: i % width, y: Math.floor(i / width) });
+  for (let i = 0; i < mask.length; i++) {
+    if (mask[i]) points.push({ x: i % maps.width, y: Math.floor(i / maps.width) });
   }
   if (points.length <= config.maxPoints) return points;
   const stride = points.length / config.maxPoints;

@@ -12,3 +12,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 canvas { max-width: 100%; border-radius: 8px; background: #0b0d12; }
 .stage { display: grid; gap: 8px; align-content: start; justify-items: start; }
 .hint { color: #8a93a8; font-size: 0.85rem; }
+.debug { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 12px; }
+.debug figure { margin: 0; display: grid; gap: 4px; flex: 1 1 220px; }
+.debug canvas { image-rendering: pixelated; width: 100%; }
+.debug figcaption { color: #8a93a8; font-size: 0.85rem; }
