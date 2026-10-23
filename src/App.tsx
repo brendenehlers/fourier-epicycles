@@ -89,7 +89,7 @@ export function App() {
           ))}
         </fieldset>
         <label>
-          Threshold: {Math.round(config.threshold * 100)}% of max gradient
+          Threshold: {Math.round(config.threshold * 100)}% of strongest nearby edge
           <input
             type="range"
             min={0.05}

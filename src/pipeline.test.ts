@@ -57,3 +57,18 @@ test("non-maximum suppression thins each side of the square to one pixel", () =>
     expect(leftSide).toHaveLength(1);
   }
 });
+
+test("a low-contrast region keeps its edges next to a high-contrast one", () => {
+  const w = 64, h = 32;
+  const data = new Uint8ClampedArray(w * h * 4).fill(255);
+  const fill = (x0: number, v: number) => {
+    for (let y = 8; y < 24; y++) for (let x = x0; x < x0 + 16; x++) data.fill(v, (y * w + x) * 4, (y * w + x) * 4 + 3);
+  };
+  fill(8, 0);
+  fill(40, 190);
+  const points = edgePoints({ width: w, height: h, data }, { operator: "sobel", threshold: 0.5, maxPoints: 10_000 });
+  const left = points.filter((p) => p.x < 32).length;
+  const right = points.filter((p) => p.x >= 32).length;
+  expect(left).toBeGreaterThan(0);
+  expect(right).toBe(left);
+});

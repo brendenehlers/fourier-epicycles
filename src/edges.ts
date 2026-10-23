@@ -23,7 +23,7 @@ export type OperatorId = keyof typeof OPERATORS;
 
 export interface EdgeConfig {
   operator: OperatorId;
-  /** Fraction of the strongest gradient a pixel needs to count as an edge, in (0, 1]. */
+  /** Fraction of the strongest nearby edge a pixel needs to count as an edge, in (0, 1]. */
   threshold: number;
   maxPoints: number;
 }
@@ -99,16 +99,44 @@ export function suppressNonMaxima({ dx, dy, magnitude }: Gradient, width: number
   return out;
 }
 
+/** Neighbourhood for local contrast, as a fraction of the longer image side. */
+const LOCAL_WINDOW = 1 / 8;
+/** Edges weaker than this fraction of the global maximum are noise, however quiet their surroundings. */
+const NOISE_FLOOR = 0.05;
+
+/** Max over a (2r+1)-square window, computed as two separable 1-D passes. */
+export function localMax(values: Float32Array, width: number, height: number, radius: number): Float32Array {
+  const rows = new Float32Array(values.length);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let m = 0;
+      for (let k = Math.max(0, x - radius); k <= Math.min(width - 1, x + radius); k++) m = Math.max(m, values[y * width + k]!);
+      rows[y * width + x] = m;
+    }
+  }
+  const out = new Float32Array(values.length);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let m = 0;
+      for (let k = Math.max(0, y - radius); k <= Math.min(height - 1, y + radius); k++) m = Math.max(m, rows[k * width + x]!);
+      out[y * width + x] = m;
+    }
+  }
+  return out;
+}
+
 export function edgePoints(raster: Raster, config: EdgeConfig): Point[] {
   const { width, height } = raster;
   const mag = suppressNonMaxima(gradient(grayscale(raster), width, height, OPERATORS[config.operator]), width, height);
   let max = 0;
   for (const m of mag) max = Math.max(max, m);
   if (max === 0) return [];
-  const cutoff = max * config.threshold;
+  // Thresholding against the local maximum keeps low-contrast regions that a global cutoff would drop.
+  const nearby = localMax(mag, width, height, Math.max(1, Math.round(Math.max(width, height) * LOCAL_WINDOW)));
+  const floor = max * NOISE_FLOOR;
   const points: Point[] = [];
   for (let i = 0; i < mag.length; i++) {
-    if (mag[i]! >= cutoff) points.push({ x: i % width, y: Math.floor(i / width) });
+    if (mag[i]! >= floor && mag[i]! >= nearby[i]! * config.threshold) points.push({ x: i % width, y: Math.floor(i / width) });
   }
   if (points.length <= config.maxPoints) return points;
   const stride = points.length / config.maxPoints;
