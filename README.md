@@ -8,3 +8,10 @@ bun run dev      # dev server
 bun test         # pipeline tests
 bun run build    # static build to dist/
 ```
+
+## Docker
+
+```bash
+docker build -t epicycle .
+docker run --rm -p 8080:80 epicycle   # http://localhost:8080
+```
